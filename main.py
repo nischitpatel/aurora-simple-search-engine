@@ -27,7 +27,7 @@ def build_inverted_index(messages):
         msg_id = msg["id"]
         messages_store[msg_id] = msg
 
-        # Simple tokenization (you can improve this)
+        # Simple tokenization
         words = msg["message"].lower().split()
 
         for w in words:
@@ -39,7 +39,7 @@ def build_inverted_index(messages):
 # Loader: Fetch ALL messages before server starts
 async def fetch_all_messages():
     """
-    Pulls all messages from your external API using pagination until no more data.
+    Pulls all messages from external API using pagination until no more data.
     """
     all_messages = []
     skip = 0
@@ -49,7 +49,7 @@ async def fetch_all_messages():
         while True:
             url = EXTERNAL_API
             try:
-                resp = await client.get(url, params={"skip": skip, "limit": limit})
+                resp = await client.get(method="GET", url=url, params={"skip": skip, "limit": limit})
                 resp.raise_for_status()
             except httpx.HTTPStatusError as e:
                 # 400 means "no more pages"
@@ -81,7 +81,7 @@ async def startup_event():
 @app.get("/search")
 async def search(query: str, page: int = 1, page_size: int = 20):
     """
-    Ultra-lightning-fast search using inverted index.
+    Search using inverted index.
     """
     if page < 1 or page_size < 1:
         raise HTTPException(422, detail="page and page_size must be >= 1")
