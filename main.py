@@ -20,9 +20,25 @@ async def cache_loader():
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.get(EXTERNAL_API, params={"skip": 0, "limit": 200})
-            r.raise_for_status()
-            cache = r.json()
+            # r = await client.get(EXTERNAL_API, params={"skip": 0, "limit": 200})
+            # r.raise_for_status()
+            # cache = r.json()
+
+            cache = []
+            skip = 0
+            limit = 200
+
+            while True:
+                r = await client.get(EXTERNAL_API, params={"skip": skip, "limit": limit})
+                r.raise_for_status()
+                cache = r.json()
+
+                if not data["items"]:
+                    break
+
+                cache.extend(data["items"])
+                skip += limit
+                
             print("Cache loaded successfully.")
 
     except Exception as e:
