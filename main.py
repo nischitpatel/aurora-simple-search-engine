@@ -49,7 +49,7 @@ async def fetch_all_messages():
         while True:
             url = EXTERNAL_API
             try:
-                resp = await client.get(method="GET", url=url, params={"skip": skip, "limit": limit})
+                resp = await client.request(method="GET", url=url, params={"skip": skip, "limit": limit})
                 resp.raise_for_status()
             except httpx.HTTPStatusError as e:
                 # 400 means "no more pages"
