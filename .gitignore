@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.log
+
+# Virtual environments
+.env
+.venv
+venv/
+ENV/
+env/
+
+# Environment variables
+*.env
+*.env.*
+!.env.example
+
+# Byte-compiled files
+*.so
+
+# Packages
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing / Cache
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Python tooling
+pip-log.txt
+poetry.lock
+Pipfile.lock
