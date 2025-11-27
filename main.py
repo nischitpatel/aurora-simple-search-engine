@@ -1,80 +1,106 @@
 from fastapi import FastAPI, HTTPException
 import httpx
 import asyncio
-from dotenv import load_dotenv
+from collections import defaultdict
 import os
+from dotenv import load_dotenv
 
 load_dotenv()
 
 EXTERNAL_API = os.getenv("BASE_URL")
+if not EXTERNAL_API:
+    raise RuntimeError("BASE_URL environment variable not set.")
 
-app = FastAPI(title="Simple Search Engine")
+app = FastAPI(title="Ultra-Fast Search Engine (Inverted Index)")
 
-# Global cache storage
-cache = None
+# GLOBAL STORAGE
+messages_store = {}          # msg_id - message dict
+inverted_index = defaultdict(list)   # word - list of msg_ids
 
-# Background cache loader
-async def cache_loader():
-    global cache
-    cache = []
+
+# HELPER FUNCTION: Build inverted index
+def build_inverted_index(messages):
+    """
+    Builds an inverted index for O(1) keyword lookups.
+    """
+    for msg in messages:
+        msg_id = msg["id"]
+        messages_store[msg_id] = msg
+
+        # Simple tokenization (you can improve this)
+        words = msg["message"].lower().split()
+
+        for w in words:
+            inverted_index[w].append(msg_id)
+
+    print(f"Inverted index built with {len(inverted_index)} unique words.")
+
+
+# Loader: Fetch ALL messages before server starts
+async def fetch_all_messages():
+    """
+    Pulls all messages from your external API using pagination until no more data.
+    """
+    all_messages = []
     skip = 0
-    limit = 200
+    limit = 1000
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=15.0) as client:
         while True:
+            url = EXTERNAL_API
             try:
-                r = await client.get(EXTERNAL_API, params={"skip": skip, "limit": limit})
-                r.raise_for_status()
+                resp = await client.get(url, params={"skip": skip, "limit": limit})
+                resp.raise_for_status()
             except httpx.HTTPStatusError as e:
+                # 400 means "no more pages"
                 if e.response.status_code == 400:
-                    print("Reached the end of available messages.")
+                    print("Reached the end of dataset.")
                     break
-                else:
-                    print("Failed to load cache:", e)
-                    break
+                raise RuntimeError(f"API error: {e}") from e
 
-            data = r.json()
+            data = resp.json()
+
             if not data["items"]:
                 break
 
-            cache.extend(data["items"])
+            all_messages.extend(data["items"])
             skip += limit
 
-    print(f"Loaded {len(cache)} messages.")
+    print(f"Loaded {len(all_messages)} messages from external API.")
+    return all_messages
 
-
+# Startup event — LOAD EVERYTHING BEFORE SERVER STARTS
 @app.on_event("startup")
-async def load_cache():
-    asyncio.create_task(cache_loader())
+async def startup_event():
+    print("\n=== LOADING DATA BEFORE SERVER START ===")
+    all_messages = await fetch_all_messages()
+    build_inverted_index(all_messages)
+    print("Server ready!\n")
 
-# Lazy fallback loader
-async def cached_messages():
-    global cache
-    if cache is None:
-        print("Cache not ready — loading on demand...")
-        await cache_loader()
-
-    # return cache.get("items", [])
-    return cache
-
-# Search API
+# SEARCH ENDPOINT
 @app.get("/search")
 async def search(query: str, page: int = 1, page_size: int = 20):
-
+    """
+    Ultra-lightning-fast search using inverted index.
+    """
     if page < 1 or page_size < 1:
-        raise HTTPException(status_code=422, detail="page and page_size must be >= 1")
+        raise HTTPException(422, detail="page and page_size must be >= 1")
 
-    messages = await cached_messages()
+    query_words = query.lower().split()
 
-    query_lower = query.lower()
+    # Collect matching message IDs for each word
+    result_ids = []
+    for q in query_words:
+        result_ids.extend(inverted_index.get(q, []))
 
-    matched = [
-        msg for msg in messages
-        if query_lower in msg.get("message", "").lower()
-    ]
+    # Deduplicate
+    result_ids = list(set(result_ids))
 
-    total = len(matched)
+    # Convert IDs - message dicts
+    results = [messages_store[mid] for mid in result_ids]
 
+    # Pagination
+    total = len(results)
     start = (page - 1) * page_size
     end = start + page_size
 
@@ -83,5 +109,5 @@ async def search(query: str, page: int = 1, page_size: int = 20):
         "total": total,
         "page": page,
         "page_size": page_size,
-        "items": matched[start:end]
+        "items": results[start:end]
     }
