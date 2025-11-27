@@ -16,34 +16,31 @@ cache = None
 # Background cache loader
 async def cache_loader():
     global cache
-    print("Loading cache...")
+    cache = []
+    skip = 0
+    limit = 200
 
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            # r = await client.get(EXTERNAL_API, params={"skip": 0, "limit": 200})
-            # r.raise_for_status()
-            # cache = r.json()
-
-            cache = []
-            skip = 0
-            limit = 200
-
-            while True:
+    async with httpx.AsyncClient() as client:
+        while True:
+            try:
                 r = await client.get(EXTERNAL_API, params={"skip": skip, "limit": limit})
                 r.raise_for_status()
-                cache = r.json()
-
-                if not data["items"]:
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 400:
+                    print("Reached the end of available messages.")
+                    break
+                else:
+                    print("Failed to load cache:", e)
                     break
 
-                cache.extend(data["items"])
-                skip += limit
-                
-            print("Cache loaded successfully.")
+            data = r.json()
+            if not data["items"]:
+                break
 
-    except Exception as e:
-        print("Failed to load cache:", e)
-        cache = {"items": []}  # fallback
+            cache.extend(data["items"])
+            skip += limit
+
+    print(f"Loaded {len(cache)} messages.")
 
 
 @app.on_event("startup")
@@ -57,7 +54,8 @@ async def cached_messages():
         print("Cache not ready — loading on demand...")
         await cache_loader()
 
-    return cache.get("items", [])
+    # return cache.get("items", [])
+    return cache
 
 # Search API
 @app.get("/search")
