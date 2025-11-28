@@ -27,7 +27,7 @@ def build_inverted_index(messages):
         msg_id = msg["id"]
         messages_store[msg_id] = msg
 
-        # Simple tokenization
+        # Tokenization
         words = msg["message"].lower().split()
 
         for w in words:
