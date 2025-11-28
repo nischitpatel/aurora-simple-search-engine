@@ -48,3 +48,5 @@ htmlcov/
 pip-log.txt
 poetry.lock
 Pipfile.lock
+
+aurora-search-engine.pem
