@@ -8,6 +8,7 @@
 
 * Python 3.11+, FastAPI, httpx, asyncio
 * `collections.defaultdict` for inverted index
+* Deployed on AWS EC2
 
 ---
 
