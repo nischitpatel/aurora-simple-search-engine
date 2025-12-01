@@ -4,19 +4,9 @@
 
 ---
 
-### **Highlights**
-
-* **Lightning-fast search:** Inverted index enables O(1) keyword lookup.
-* **Periodic cache refresh:** Updates every 5–10 minutes to serve fresh data without slowing queries.
-* **Asynchronous & scalable:** Uses `httpx` and `asyncio` for non-blocking API fetching.
-* **Pagination support:** Handles large datasets efficiently with easy-to-use query parameters.
-
----
-
 ### **Tech Stack**
 
 * Python 3.11+, FastAPI, httpx, asyncio
-* `fastapi-utils` for background scheduling
 * `collections.defaultdict` for inverted index
 
 ---
